@@ -20,7 +20,7 @@ pip install -r requirements.txt
 Set api-keys  
 ```sh
 touch .api_keys
-echo -e "REAL_DEBIRD_API_KEY=<your_api_key>\nTVDB_API_KEY=<your_api_key>" > .api_keys
+echo -e "REAL_DEBRID_API_KEY=<your_api_key>\nTVDB_API_KEY=<your_api_key>" > .api_keys
 ```
 
 Run

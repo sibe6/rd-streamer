@@ -1,0 +1,5 @@
+/.api_keys
+/__pycache__/
+/scrapers/__pycache__/
+/history.json
+/image_cache/

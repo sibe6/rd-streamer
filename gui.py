@@ -3,6 +3,7 @@ from ttkbootstrap.scrolled import ScrolledFrame
 from ttkbootstrap.constants import *
 from PIL import Image, ImageTk
 from collections import deque
+import constants as c
 import ttkbootstrap as ttk
 import helpers as h
 import requests
@@ -12,7 +13,7 @@ import os
 
 
 class MainWindow:
-    def __init__(self, root, on_search_callback, on_seasons_callback, on_episodes_callback, on_sources_callback, on_magnet_callback):
+    def __init__(self, root, on_callback):
         self._root = root
         self._root.geometry("700x700")
         self._root.title("rd-streamer")
@@ -22,22 +23,17 @@ class MainWindow:
         self._header = None
         self._middle = None
         self._footer = None
-        self._on_search_callback = on_search_callback
-        self._on_seasons_callback = on_seasons_callback
-        self._on_episodes_callback = on_episodes_callback
-        self._on_sources_callback = on_sources_callback
-        self._on_magnet_callback = on_magnet_callback
+        self._on_callback = on_callback
         self._list_window_stack = deque()
         self._context_manager = ContextManager()
 
         self._setup_layout()
 
     def _setup_layout(self):
-        self._header = Header(self._root, self._on_search_callback, self.new_middle_callback, self.go_back)
+        self._header = Header(self._root, self._on_callback, self.new_middle_callback, self.go_back)
         self._middle = Frame(self._root, width=650, bg="white")
         self._middle.pack(fill=constants.BOTH, expand=True, side=constants.TOP)
         self._footer = Footer(self._root, self._context_manager)
-
 
     def footer_callback(self, download_link):
         print(f"Updating footer with link: {download_link}")
@@ -59,19 +55,15 @@ class MainWindow:
             previous = self._list_window_stack[-1]
             previous.hide()
 
-        if action == "search_sources":
-            list_window = ListWindow(self._middle, self._on_seasons_callback,
-                                     self._on_episodes_callback, self._on_sources_callback,
-                                     self._on_magnet_callback, self.new_middle_callback,
+        if action == c.SEARCH_SOURCES:
+            list_window = ListWindow(self._middle, self._on_callback, self.new_middle_callback,
                                      self._context_manager, self.footer_callback)
             list_window.display_sources(items)
             self._list_window_stack.append(list_window)
         else:
-            list_window = ListWindow(self._middle, self._on_seasons_callback,
-                                        self._on_episodes_callback, self._on_sources_callback,
-                                        self._on_magnet_callback, self.new_middle_callback,
-                                        self._context_manager, self.footer_callback)
-            list_window.display(items or [{"id": "1", "title": "Sample Movie", "year": "2024"}])
+            list_window = ListWindow(self._middle, self._on_callback, self.new_middle_callback,
+                                     self._context_manager, self.footer_callback)
+            list_window.display(items)
             self._list_window_stack.append(list_window)
 
     def go_back(self):
@@ -84,21 +76,19 @@ class MainWindow:
         else:
             print("No previous window to go back to.")
 
-
     def start(self):
         self._root.mainloop()
 
-
 class Header:
-    def __init__(self, parent, on_search_callback, new_middle_callback, on_back_click):
+    def __init__(self, parent, on_callback, new_middle_callback, on_back_click):
         self._frame = Frame(parent, height=200, bg="lightblue")
         self._frame.pack(fill=constants.X, side=constants.TOP)
 
-        self._on_search_callback = on_search_callback
+        self._on_callback = on_callback
         self._new_middle_callback = new_middle_callback
         self._on_back_click = on_back_click
         self._search_var = StringVar()
-        self._radio_var = StringVar(value="series")
+        self._radio_var = StringVar(value=c.SEARCH_SERIES)
         self._history_data = []
 
         self._setup_header()
@@ -113,8 +103,8 @@ class Header:
 
         Button(self._frame, text="Search", command=self._on_search_click).pack(side=constants.LEFT, padx=5, pady=5)
 
-        Radiobutton(self._frame, text="Shows", variable=self._radio_var, value="series").pack(side=constants.LEFT, padx=5, pady=5)
-        Radiobutton(self._frame, text="Movies", variable=self._radio_var, value="movie").pack(side=constants.LEFT, padx=5, pady=5)
+        Radiobutton(self._frame, text="Shows", variable=self._radio_var, value=c.SEARCH_SERIES).pack(side=constants.LEFT, padx=5, pady=5)
+        Radiobutton(self._frame, text="Movies", variable=self._radio_var, value=c.SEARCH_MOVIES).pack(side=constants.LEFT, padx=5, pady=5)
 
         Button(self._frame, text="Back", command=self._on_back_click).pack(side=constants.RIGHT, padx=5, pady=5)
         Button(self._frame, text="History", command=self._show_history_window).pack(side=constants.RIGHT, padx=5, pady=5)
@@ -124,11 +114,11 @@ class Header:
 
     def _on_search_click(self):
         search_term = self._search_var.get()
-        selected_category = self._radio_var.get()
+        callback_type = self._radio_var.get()
 
-
-        if self._on_search_callback:
-            self._on_search_callback(search_term, selected_category, update_callback=self._new_middle_callback)
+        print("CALLBACK", callback_type)
+        if self._on_callback:
+            self._on_callback(callback_type, search_term, self._new_middle_callback)
 
     def _show_history_window(self):
         self._history_data = history.load_history()
@@ -141,7 +131,6 @@ class Header:
         history_window = Toplevel(self._frame)
         history_window.title("History")
         history_window.geometry("400x300")
-
 
         history_listbox = Listbox(history_window, width=50, height=15)
         history_listbox.pack(padx=10, pady=10)
@@ -183,7 +172,6 @@ class Header:
         except Exception as e:
             print(f"Error opening video: {e}")
 
-
 class Footer:
     def __init__(self, parent, context_manager):
         self._frame = Frame(parent, height=50, bg="lightgray")
@@ -220,15 +208,11 @@ class Footer:
         pass
 
 class ListWindow:
-    def __init__(self, parent, on_seasons_callback, on_episodes_callback, on_sources_callback,
-                 on_magnet_callback, new_middle_callback, context_manager, footer_callback):
+    def __init__(self, parent, on_callback, new_middle_callback, context_manager, footer_callback):
         self._parent = parent
 
         self._new_middle_callback = new_middle_callback
-        self._on_seasons_callback = on_seasons_callback
-        self._on_episodes_callback = on_episodes_callback
-        self._on_sources_callback = on_sources_callback
-        self._on_magnet_callback = on_magnet_callback
+        self._on_callback = on_callback
         self._context_manager = context_manager
         self._footer_callback = footer_callback
 
@@ -269,32 +253,31 @@ class ListWindow:
 
 
     def _on_item_click(self, item):
-        print(f"Item clicked: ({item['id']}) {item['title']} ({item['year']}) {item['item']}")
+        print(f"Item clicked: ({item['id']}) {item['title']} ({item['year']}) {item['item_type']}")
 
-        if (item.get('item') == "movie"):
+        if (item.get('item_type') == c.MOVIE):
             self._context_manager.set_show(h.normalize_text(item.get('title')))
-            self._context_manager.set_type(item['item'])
+            self._context_manager.set_type(item['item_type'])
             self._context_manager.set_year(item.get('year'))
-            if self._on_sources_callback:
-                self._on_sources_callback(self._context_manager.get_context(), update_callback=self._new_middle_callback)
-        elif (item.get('item') == "series"):
-            self._context_manager.set_type(item['item'])
+            if self._on_callback:
+                self._on_callback(c.SEARCH_SOURCES, self._context_manager.get_context(), self._new_middle_callback)
+        elif (item.get('item_type') == c.SERIES):
+            self._context_manager.set_type(item['item_type'])
             self._context_manager.set_year(item.get('year'))
             self._context_manager.set_show(h.normalize_text(item.get('title')))
-            if self._on_seasons_callback:
-                self._on_seasons_callback(item['id'], update_callback=self._new_middle_callback)
-        elif (item.get('item') == "season"):
+            if self._on_callback:
+                self._on_callback(c.SEARCH_SEASONS, item['id'], self._new_middle_callback)
+        elif (item.get('item_type') == c.SEASON):
             self._context_manager.set_season(item.get('number'))
-            if self._on_episodes_callback:
-                self._on_episodes_callback(item['id'], update_callback=self._new_middle_callback)
-        elif (item.get('item') == 'get_sources'):
+            if self._on_callback:
+                self._on_callback(c.SEARCH_EPISODES, item['id'], self._new_middle_callback)
+        elif (item.get('item_type') == c.EPISODE):
             self._context_manager.set_episode(item.get('year'))
-            if self._on_sources_callback:
-                self._on_sources_callback(self._context_manager.get_context(), update_callback=self._new_middle_callback)
+            if self._on_callback:
+                self._on_callback(c.SEARCH_SOURCES, self._context_manager.get_context(), self._new_middle_callback)
 
     def display_sources(self, items):
         if not items:
-
             frame = ttk.Frame(self._frame)
             frame.pack(fill="x", padx=10, pady=5)
             label_text = f"No sources found"
@@ -308,7 +291,6 @@ class ListWindow:
             row_frame = ttk.Frame(self._frame, padding=5)
             row_frame.pack(fill="x", expand=True, padx=10, pady=5)
 
-
             label_text = f"{name} ({size})"
             label = Label(row_frame, text=label_text, anchor="w", padx=10, pady=5)
             label.pack(side="left", fill="x", expand=True)
@@ -316,9 +298,9 @@ class ListWindow:
             label.bind("<Button-1>", lambda e, item=item: self._on_source_click(item))
 
     def _on_source_click(self, source):
-        if self._on_magnet_callback:
+        if self._on_callback:
             self._context_manager.set_torrent_name(source['torrentName'])
-            self._on_magnet_callback(source, callback=self._footer_callback)
+            self._on_callback(c.GET_LINK, source, self._footer_callback)
 
     def destroy(self):
         self._scrollable_frame.container.destroy()

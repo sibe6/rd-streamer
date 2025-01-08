@@ -2,14 +2,15 @@ import tvdb_v4_official
 import re
 from helpers import download_image
 from dotenv import load_dotenv
+import constants as c
 import os
 
 load_dotenv('.api_keys')
 TVDB_API_KEY = os.getenv("TVDB_API_KEY")
 tvdb = tvdb_v4_official.TVDB(TVDB_API_KEY)
 
-async def search_shows(title, type_, limit_=20):
-    results = tvdb.search(title, limit=limit_, type=type_)
+async def search_shows(title, limit_=20):
+    results = tvdb.search(title, limit=limit_, type=c.SERIES)
     if results:
         formatted_results = []
         image_tasks = []
@@ -23,7 +24,7 @@ async def search_shows(title, type_, limit_=20):
                 "release_date": result.get('first_air_time', 'N/A'),
                 "status": result.get('status', 'N/A'),
                 "image_url": result.get('image_url', 'N/A'),
-                "item": get_letters(result['id']),
+                "item_type": get_letters(result['id']),
             }
             show_data.append(show_details)
             if show_details.get('image_url'):
@@ -36,8 +37,8 @@ async def search_shows(title, type_, limit_=20):
     else:
         return []
 
-async def search_movies(title, type_, limit_=20):
-    results = tvdb.search(title, limit=limit_, type=type_)
+async def search_movies(title, limit_=20):
+    results = tvdb.search(title, limit=limit_, type=c.MOVIE)
     if results:
         formatted_results = []
         image_tasks = []
@@ -51,7 +52,7 @@ async def search_movies(title, type_, limit_=20):
                 "release_date": result.get('first_air_time', 'N/A'),
                 "status": result.get('status', 'N/A'),
                 "image_url": result.get('image_url', 'N/A'),
-                "item": get_letters(result['id']),
+                "item_type": get_letters(result['id']),
             }
             movie_data.append(movie_details)
             if movie_details.get('image_url'):
@@ -81,7 +82,7 @@ async def search_seasons(id_):
                 "title": season.get('name', f"Season {season['number']}"),
                 "year": season.get('lastUpdated', "").split("-")[0],
                 "image_url": season.get('image', None),
-                "item": "season",
+                "item_type": c.SEASON,
                 "number": season.get('number'),
             }
             season_data.append(season_details)
@@ -108,7 +109,7 @@ async def search_episodes_for_season(season_id):
                 "title": episode.get('name', f"Episode {episode['number']}"),
                 "year": episode.get('number'),
                 "image_url": episode.get('image', None),
-                "item": "get_sources",
+                "item_type": c.EPISODE,
                 "overview": episode.get('overview', "No description available."),
             }
             episodes_data.append(episode_details)

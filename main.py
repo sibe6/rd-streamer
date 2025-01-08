@@ -1,20 +1,16 @@
-from PIL import Image, ImageTk
 from gui import MainWindow
-import requests
-import io
 import tvdb_api as s
 import xml.etree.ElementTree as ET
 import asyncio
 from scrapers._1337Scraper import search_1337x_async
 import realdebrid_api
-import subprocess
+import constants as c
 from tkinter import Tk
 import helpers as h
 
 
-def get_link(torrent, callback):
+def get_link(torrent, update_callback):
     magnet_link = torrent.get('magnet')
-
 
     upload_response = realdebrid_api.upload_magnet(magnet_link)
     t_id = upload_response.get('id')
@@ -22,7 +18,6 @@ def get_link(torrent, callback):
     torrent_info = realdebrid_api.get_torrent_info(t_id)
 
     realdebrid_api.select_files(t_id, get_largest_file_id(torrent_info))
-
 
     link = realdebrid_api.get_user_torrents()
     print(link)
@@ -32,8 +27,8 @@ def get_link(torrent, callback):
     print("\nUser downloads")
     realdebrid_api.get_user_downloads()
 
-    if callback:
-        callback(download_link)
+    if update_callback:
+        update_callback(download_link)
     h.open_in_player(download_link)
 
 def get_largest_file_id(torrent_info):
@@ -52,18 +47,17 @@ def get_largest_file_id(torrent_info):
     return largest_file_id
 
 def search(title, type_, update_callback):
-
     h.normalize_text(title)
     print("\tsearch")
     async def search_and_update():
         try:
-            if type_ == "movie":
-                results = await s.search_movies(title, type_)
-                update_callback("search_movie", results)
+            if type_ == c.SEARCH_MOVIES:
+                results = await s.search_movies(title)
+                update_callback(c.SEARCH_MOVIES, results)
             else:
                 print("Searching for a show")
-                results = await s.search_shows(title, type_)
-                update_callback("search_series", results)
+                results = await s.search_shows(title)
+                update_callback(c.SEARCH_SERIES, results)
         except Exception as e:
             update_callback(["search error"])
 
@@ -80,7 +74,6 @@ def search_seasons(id_, update_callback):
             update_callback(["search_seasons error"])
 
     asyncio.run(search_and_update())
-
 
 def search_episodes(season_id, update_callback):
     async def search_and_update():
@@ -108,21 +101,31 @@ def search_sources(current_context, update_callback):
 
             torrents_1337 = await search_1337x_async(query_1337x)
 
-            update_callback("search_sources", torrents_1337)
+            update_callback(c.SEARCH_SOURCES, torrents_1337)
         except Exception as e:
             update_callback(["search_sources error"])
 
     asyncio.run(search_and_update())
+
+def callback_manager(callback_type, payload, update_callback):
+    if callback_type == c.SEARCH_MOVIES:
+        search(payload, callback_type, update_callback)
+    elif callback_type == c.SEARCH_SERIES:
+        search(payload, callback_type, update_callback)
+    elif callback_type == c.SEARCH_SEASONS:
+        search_seasons(payload, update_callback)
+    elif callback_type == c.SEARCH_EPISODES:
+        search_episodes(payload, update_callback)
+    elif callback_type == c.SEARCH_SOURCES:
+        search_sources(payload, update_callback)
+    elif callback_type == c.GET_LINK:
+        get_link(payload, update_callback)
 
 if __name__ == "__main__":
     h.clear_cache_if_exceeds_limit()
     window = Tk()
     app = MainWindow(
         window,
-        on_search_callback=search,
-        on_seasons_callback=search_seasons,
-        on_episodes_callback=search_episodes,
-        on_sources_callback=search_sources,
-        on_magnet_callback=get_link
+        on_callback=callback_manager,
     )
     app.start()

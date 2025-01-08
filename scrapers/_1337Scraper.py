@@ -107,10 +107,3 @@ async def search_1337x_async(query):
 
         print(f"Found {len(torrents)} torrents with magnet info.")
         return torrents
-
-# Running the main asynchronous function
-if __name__ == "__main__":
-    search_query = 'Shogun.2024.s01e01'  # Example search term
-    loop = asyncio.get_event_loop()
-    torrents = loop.run_until_complete(search_1337x_async(search_query))
-    print("Final torrents list:", torrents)

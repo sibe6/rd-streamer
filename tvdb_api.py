@@ -35,7 +35,7 @@ async def search_shows(title, limit_=20):
             show_details['image_path'] = image_path
         return show_data
     else:
-        return []
+        return None
 
 async def search_movies(title, limit_=20):
     results = tvdb.search(title, limit=limit_, type=c.MOVIE)
@@ -63,7 +63,7 @@ async def search_movies(title, limit_=20):
             movie_details['image_path'] = image_path
         return movie_data
     else:
-        return []
+        return None
 
 async def search_seasons(id_):
     print(f"Fetching seasons for series with ID: {id_}")

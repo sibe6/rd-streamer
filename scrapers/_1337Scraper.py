@@ -90,7 +90,7 @@ async def search_1337x_async(query):
         torrents = await scrape_1337x(session, search_url)
         if not torrents:
             print("No torrents found.")
-            return []
+            return None
 
         # Gather magnet info for each torrent asynchronously
         tasks = []

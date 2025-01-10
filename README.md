@@ -8,7 +8,7 @@ Requires following API-keys
 - [Real-Debrid Premium](https://real-debrid.com/)
 - [TVDB](https://www.thetvdb.com/api-information)
 
-PotPlayer set as default player. Can be changed from ```./helpers.py open_in_player() ```
+PotPlayer set as default player. Can be changed in ```./helpers.py open_in_player()```
 
 ## Usage
 
@@ -36,3 +36,12 @@ main.py
 - better source filtering
 - refactor code to be more clear
 - popular movies and shows on the front page
+
+
+  File "C:\Users\\c\rd-streamer\main.py", line 62, in search_and_update
+    update_callback(["search error"])
+  File "C:\Users\\c\rd-streamer\gui.py", line 66, in new_middle_callback
+    list_window.display(items)
+  File "C:\Users\\c\rd-streamer\gui.py", line 228, in display
+    for item in items:
+TypeError: 'NoneType' object is not iterable

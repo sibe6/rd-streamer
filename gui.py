@@ -55,14 +55,12 @@ class MainWindow:
             previous = self._list_window_stack[-1]
             previous.hide()
 
+        list_window = ListWindow(self._middle, self._on_callback, self.new_middle_callback,
+                                    self._context_manager, self.footer_callback)
         if action == c.SEARCH_SOURCES:
-            list_window = ListWindow(self._middle, self._on_callback, self.new_middle_callback,
-                                     self._context_manager, self.footer_callback)
             list_window.display_sources(items)
             self._list_window_stack.append(list_window)
         else:
-            list_window = ListWindow(self._middle, self._on_callback, self.new_middle_callback,
-                                     self._context_manager, self.footer_callback)
             list_window.display(items)
             self._list_window_stack.append(list_window)
 
@@ -223,12 +221,13 @@ class ListWindow:
         self._frame.pack(fill=BOTH, expand=YES)
 
     def display(self, items):
-        self.clear()
+        if items == None:
+            self.no_results()
+            return
 
         for item in items:
             title = item.get('title')
             year = item.get('year')
-            id_ = item.get('id')
 
             row_frame = ttk.Frame(self._frame, padding=5)
             row_frame.pack(fill="x", expand=True, padx=10, pady=5)
@@ -277,6 +276,10 @@ class ListWindow:
                 self._on_callback(c.SEARCH_SOURCES, self._context_manager.get_context(), self._new_middle_callback)
 
     def display_sources(self, items):
+        if items == None:
+            self.no_results()
+            return
+
         if not items:
             frame = ttk.Frame(self._frame)
             frame.pack(fill="x", padx=10, pady=5)
@@ -305,14 +308,16 @@ class ListWindow:
     def destroy(self):
         self._scrollable_frame.container.destroy()
 
-    def clear(self):
-        pass
-
     def hide(self):
         self._scrollable_frame.pack_forget()
 
     def show(self):
         self._scrollable_frame.pack(fill=BOTH, expand=YES, padx=10, pady=10)
+
+    def no_results(self):
+        label_text = f"No results found"
+        label = ttk.Label(self._frame, text=label_text)
+        label.pack(side=constants.LEFT, fill="x", expand=True)
 
 def load_image(image_url, target_height=150):
     if image_url:

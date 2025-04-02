@@ -1,4 +1,4 @@
-from tkinter import Frame, Button, Label, Entry, Radiobutton, StringVar, constants, Scrollbar, Toplevel, Listbox
+from tkinter import Frame, Button, Label, Entry, Radiobutton, StringVar, constants, Scrollbar, Toplevel, Listbox, OptionMenu
 from ttkbootstrap.scrolled import ScrolledFrame
 from ttkbootstrap.constants import *
 from PIL import Image, ImageTk
@@ -30,7 +30,7 @@ class MainWindow:
         self._setup_layout()
 
     def _setup_layout(self):
-        self._header = Header(self._root, self._on_callback, self.new_middle_callback, self.go_back)
+        self._header = Header(self._root, self._on_callback, self.new_middle_callback, self.go_back, self._context_manager)
         self._middle = Frame(self._root, width=650, bg="white")
         self._middle.pack(fill=constants.BOTH, expand=True, side=constants.TOP)
         self._footer = Footer(self._root, self._context_manager)
@@ -41,7 +41,7 @@ class MainWindow:
         self._footer.display_link(download_link)
 
     def new_middle_callback(self, action, items=None):
-        if action == "search_movie" or action == "search_series":
+        if action == c.SEARCH_MOVIES or action == c.SEARCH_SERIES or action == c.SEARCH_RAW:
             print("\tSearch pressed, clearing the stack and destroying all windows.")
 
             while self._list_window_stack:
@@ -78,7 +78,7 @@ class MainWindow:
         self._root.mainloop()
 
 class Header:
-    def __init__(self, parent, on_callback, new_middle_callback, on_back_click):
+    def __init__(self, parent, on_callback, new_middle_callback, on_back_click, context_manager):
         self._frame = Frame(parent, height=200, bg="lightblue")
         self._frame.pack(fill=constants.X, side=constants.TOP)
 
@@ -88,6 +88,7 @@ class Header:
         self._search_var = StringVar()
         self._radio_var = StringVar(value=c.SEARCH_SERIES)
         self._history_data = []
+        self._context_manager = context_manager
 
         self._setup_header()
 
@@ -103,9 +104,21 @@ class Header:
 
         Radiobutton(self._frame, text="Shows", variable=self._radio_var, value=c.SEARCH_SERIES).pack(side=constants.LEFT, padx=5, pady=5)
         Radiobutton(self._frame, text="Movies", variable=self._radio_var, value=c.SEARCH_MOVIES).pack(side=constants.LEFT, padx=5, pady=5)
+        Radiobutton(self._frame, text="Raw", variable=self._radio_var, value=c.SEARCH_RAW).pack(side=constants.LEFT, padx=5, pady=5)
 
         Button(self._frame, text="Back", command=self._on_back_click).pack(side=constants.RIGHT, padx=5, pady=5)
         Button(self._frame, text="History", command=self._show_history_window).pack(side=constants.RIGHT, padx=5, pady=5)
+
+        sources = [c._1337X, c.PIRATEBAY, c.NYAASI, c.YTS]
+
+        self._source_var = StringVar(self._frame)
+        self._source_var.set(sources[0])
+        OptionMenu(self._frame, self._source_var, *sources, command=self._on_source_select).pack(side=constants.RIGHT, padx=5, pady=5)
+
+    def _on_source_select(self, *args):
+        new_source = self._source_var.get()
+        self._context_manager.set_source(new_source)
+        print(f"Source updated to: {new_source}")
 
     def _on_search_enter(self, event):
         self._on_search_click()
@@ -116,7 +129,11 @@ class Header:
 
         print("CALLBACK", callback_type)
         if self._on_callback:
-            self._on_callback(callback_type, search_term, self._new_middle_callback)
+            if callback_type != c.SEARCH_RAW:
+                self._on_callback(callback_type, search_term, self._new_middle_callback)
+                return
+            self._context_manager.set_show(search_term)
+            self._on_callback(callback_type, self._context_manager.get_context(), self._new_middle_callback)
 
     def _show_history_window(self):
         self._history_data = history.load_history()
@@ -339,7 +356,14 @@ def load_image(image_url, target_height=150):
 
 class ContextManager:
     def __init__(self):
-        self.reset()
+        self.year = None
+        self.type_ = None
+        self.show = None
+        self.season = None
+        self.episode = None
+        self.torrent_name = None
+        self.download_link = None
+        self.source = "1337x"
 
     def reset(self):
         self.year = None
@@ -371,6 +395,9 @@ class ContextManager:
     def set_download_link(self, download_link):
         self.download_link = download_link
 
+    def set_source(self, source):
+        self.source = source
+
     def get_context(self):
         return {
             "type": self.type_,
@@ -380,4 +407,5 @@ class ContextManager:
             "episode": self.episode,
             "torrent_name": self.torrent_name,
             "download_link": self.download_link,
+            "source": self.source
         }

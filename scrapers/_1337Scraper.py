@@ -1,6 +1,7 @@
 import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
+import urllib.parse
 
 # Asynchronous helper function to make HTTP requests
 async def get_html(session, url):
@@ -80,7 +81,18 @@ async def get_1337_magnet(session, url):
     }
 
 # Asynchronous function to fetch torrents and magnet links
-async def search_1337x_async(query):
+async def search_1337x_async(title, current_context, raw=False):
+    print("search_1337x_async()")
+    if (current_context.get('type') == "series"):
+        season = current_context.get('season')
+        episode = current_context.get('episode')
+        query = f"{title}%20s{int(season):02}e{int(episode):02}"
+    elif (raw):
+            query = urllib.parse.quote(title)
+    else:
+        year = current_context.get('year')
+        query = f"{title}%20{int(year)}"
+     
     print(f"Searching for query: {query}")
     search_url = f'https://1337x.to/sort-search/{query}/size/desc/1/'
 

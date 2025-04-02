@@ -3,6 +3,7 @@ import tvdb_api as s
 import xml.etree.ElementTree as ET
 import asyncio
 from scrapers._1337Scraper import search_1337x_async
+from scrapers.piratebayScraper import search_piratebay
 import realdebrid_api
 import constants as c
 from tkinter import Tk
@@ -89,27 +90,51 @@ def search_episodes(season_id, update_callback):
 def search_sources(current_context, update_callback):
     async def search_and_update():
         try:
-            query_1337x = None
             title = h.normalize_text(current_context.get('show'))
-            if (current_context.get('type') == "series"):
-                season = current_context.get('season')
-                episode = current_context.get('episode')
-                query_1337x = f"{title}%20s{int(season):02}e{int(episode):02}"
+
+            if (current_context.get('source') == c._1337X):
+                results = await search_1337x_async(title, current_context)
+            elif (current_context.get('source') == c.NYAASI):
+                return
+            elif (current_context.get('source') == c.PIRATEBAY):
+                results = await search_piratebay(title, current_context)
+            elif (current_context.get('source') == c.YTS):
+                return 
             else:
-                year = current_context.get('year')
-                query_1337x = f"{title}%20{int(year)}"
+                print("search_sources: Unknown source")
 
-            torrents_1337 = await search_1337x_async(query_1337x)
-
-            update_callback(c.SEARCH_SOURCES, torrents_1337)
+            update_callback(c.SEARCH_SOURCES, results)
         except Exception as e:
             update_callback(["search_sources error"])
+
+    asyncio.run(search_and_update())
+
+def search_raw(current_context, update_callback):
+    print("\tsearch_raw", current_context.get('show'))
+    async def search_and_update():
+        try:
+            if (current_context.get('source') == c._1337X):
+                results = await search_1337x_async(current_context.get("show"), current_context, raw=True)
+            elif (current_context.get('source') == c.NYAASI):
+                return
+            elif (current_context.get('source') == c.PIRATEBAY):
+                results = await search_piratebay(current_context.get("show"), current_context, raw=True)
+            elif (current_context.get('source') == c.YTS):
+                return 
+            else:
+                print("search_raw: Unknown source")
+
+            update_callback(c.SEARCH_SOURCES, results)
+        except Exception as e:
+            update_callback(["search error"])
 
     asyncio.run(search_and_update())
 
 def callback_manager(callback_type, payload, update_callback):
     if callback_type == c.SEARCH_MOVIES:
         search(payload, callback_type, update_callback)
+    elif callback_type == c.SEARCH_RAW:
+        search_raw(payload, update_callback)
     elif callback_type == c.SEARCH_SERIES:
         search(payload, callback_type, update_callback)
     elif callback_type == c.SEARCH_SEASONS:
